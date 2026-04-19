@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maintenance Admin Dashboard</title>
+<link rel="manifest" href="manifest-admin.json">
+<meta name="theme-color" content="#0f172a">
+<style>
+:root {
+  --bg: #0f172a; --surface: #1e293b; --surface2: #334155; --surface3: #475569;
+  --accent: #38bdf8; --accent2: #0ea5e9; --success: #22c55e; --danger: #ef4444;
+  --warning: #f59e0b; --text: #f1f5f9; --muted: #94a3b8; --border: rgba(148,163,184,0.15);
+  --radius: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* Layout */
+.sidebar {
+  width: 220px; background: var(--surface); border-right: 1px solid var(--border);
+  position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; padding: 20px 0;
+}
+.main { margin-left: 220px; min-height: 100vh; }
+.topbar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 14px 24px; display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 5;
+}
+.content { padding: 24px; }
+
+/* Sidebar */
+.logo { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.logo h2 { font-size: 15px; font-weight: 700; color: var(--accent); }
+.logo p { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 20px;
+  cursor: pointer; font-size: 13px; color: var(--muted); transition: all 0.15s;
+  border-left: 3px solid transparent;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+.nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(56,189,248,0.08); }
+.nav-icon { font-size: 15px; }
+.nav-badge {
+  margin-left: auto; background: var(--danger); color: #fff;
+  font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 99px;
+}
+
+/* Stats Row */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px;
+}
+.stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.stat-value { font-size: 28px; font-weight: 700; }
+.stat-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.c-blue .stat-value { color: var(--accent); }
+.c-green .stat-value { color: var(--success); }
+.c-red .stat-value { color: var(--danger); }
+.c-amber .stat-value { color: var(--warning); }
+
+/* Table */
+.table-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+}
+.table-header {
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.table-header h3 { font-size: 14px; font-weight: 600; }
+.controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+input[type=text], select {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  padding: 7px 12px; color: var(--text); font-size: 13px; outline: none; transition: border-color 0.2s;
+}
+input[type=text]:focus, select:focus { border-color: var(--accent); }
+input[type=text] { width: 200px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead { background: var(--surface2); }
+th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); white-space: nowrap; }
+td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+.machine-cell { display: flex; align-items: center; gap: 8px; }
+.machine-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.machine-name { font-weight: 500; font-size: 13px; }
+.machine-id { font-size: 11px; color: var(--muted); }
+
+/* Badges */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px;
+  border-radius: 4px; font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.badge-green { background: rgba(34,197,94,0.15); color: var(--success); }
+.badge-red { background: rgba(239,68,68,0.15); color: var(--danger); }
+.badge-amber { background: rgba(245,158,11,0.15); color: var(--warning); }
+.badge-gray { background: rgba(148,163,184,0.12); color: var(--muted); }
+
+/* Action buttons */
+.btn-sm {
+  padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border);
+  background: transparent; color: var(--text); font-size: 12px; cursor: pointer; transition: all 0.15s;
+}
+.btn-sm:hover { background: var(--surface2); }
+.btn-primary { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+.btn-primary:hover { background: var(--accent); border-color: var(--accent); }
+
+/* Modal */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50;
+  align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  width: 100%; max-width: 600px; max-height: 85vh; overflow-y: auto;
+}
+.modal-head {
+  padding: 18px 20px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.modal-head h3 { font-size: 15px; font-weight: 600; }
+.modal-close { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 0 4px; }
+.modal-body { padding: 20px; }
+.detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.detail-row:last-child { border-bottom: none; }
+.detail-label { color: var(--muted); }
+.checklist-log-item {
+  padding: 10px 14px; border-radius: 8px; margin-bottom: 8px;
+  border: 1px solid var(--border); font-size: 13px;
+}
+.checklist-log-item.pass { background: rgba(34,197,94,0.06); border-color: rgba(34,197,94,0.25); }
+.checklist-log-item.fail { background: rgba(239,68,68,0.06); border-color: rgba(239,68,68,0.25); }
+.log-q { font-weight: 500; margin-bottom: 4px; }
+.log-comment { font-size: 12px; color: var(--danger); margin-top: 4px; font-style: italic; }
+
+/* QR Panel */
+#qr-panel { display: none; }
+.qr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+.qr-card {
+  background: var(--surface2); border-radius: var(--radius); padding: 16px;
+  text-align: center; border: 1px solid var(--border);
+}
+.qr-placeholder {
+  width: 100px; height: 100px; margin: 0 auto 10px;
+  background: #fff; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: #333; font-family: monospace; flex-direction: column; gap: 4px;
+}
+.qr-card h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.qr-card p { font-size: 11px; color: var(--muted); }
+.qr-url { font-size: 10px; color: var(--accent); margin-top: 6px; word-break: break-all; font-family: monospace; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 100;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 18px; font-size: 13px; color: var(--text);
+  transform: translateY(80px); opacity: 0; transition: all 0.25s; pointer-events: none;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* No data */
+.no-data { padding: 48px; text-align: center; color: var(--muted); }
+.no-data p { margin-top: 8px; font-size: 13px; }
+
+/* Top bar actions */
+.topbar-left h2 { font-size: 15px; font-weight: 600; }
+.topbar-left p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+#clock { font-size: 12px; color: var(--muted); }
+
+/* Filters */
+.filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.filter-chip {
+  padding: 5px 14px; border-radius: 99px; border: 1px solid var(--border);
+  font-size: 12px; cursor: pointer; background: transparent; color: var(--muted); transition: all 0.15s;
+}
+.filter-chip.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="logo">
+    <h2>🔧 MaintenanceOS</h2>
+    <p>Workshop Admin Portal</p>
+  </div>
+  <div class="nav-item active" onclick="showPanel('dashboard')">
+    <span class="nav-icon">📊</span> Dashboard
+  </div>
+  <div class="nav-item" onclick="showPanel('logs')">
+    <span class="nav-icon">📋</span> All Logs
+    <span class="nav-badge" id="nav-badge">0</span>
+  </div>
+  <div class="nav-item" onclick="showPanel('qrcodes')">
+    <span class="nav-icon">📱</span> QR Codes
+  </div>
+  <div class="nav-item" onclick="exportCSV()">
+    <span class="nav-icon">⬇</span> Export CSV
+  </div>
+  <div class="nav-item" onclick="clearData()" style="margin-top: auto; color: var(--danger);">
+    <span class="nav-icon">🗑</span> Clear Data
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h2 id="panel-title">Machine Summary Dashboard</h2>
+      <p id="panel-sub">Overview of all 20 machines</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <span id="clock"></span>
+      <button class="btn-sm btn-primary" onclick="loadDemoData()">Load Demo Data</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Stats -->
+    <div class="stats-grid" id="stats-row">
+      <div class="stat-card c-blue">
+        <div class="stat-label">Total Inspections</div>
+        <div class="stat-value" id="s-total">0</div>
+        <div class="stat-sub">all time</div>
+      </div>
+      <div class="stat-card c-green">
+        <div class="stat-label">Machines OK</div>
+        <div class="stat-value" id="s-ok">0</div>
+        <div class="stat-sub">last inspection passed</div>
+      </div>
+      <div class="stat-card c-red">
+        <div class="stat-label">Issues Found</div>
+        <div class="stat-value" id="s-issues">0</div>
+        <div class="stat-sub">failed checks today</div>
+      </div>
+      <div class="stat-card c-amber">
+        <div class="stat-label">Pending</div>
+        <div class="stat-value" id="s-pending">0</div>
+        <div class="stat-sub">not yet inspected today</div>
+      </div>
+    </div>
+
+    <!-- Dashboard Panel -->
+    <div id="dashboard-panel">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Machine Status Summary</h3>
+          <div class="controls">
+            <input type="text" id="search-input" placeholder="Search machines..." oninput="renderTable()">
+            <select id="filter-status" onchange="renderTable()">
+              <option value="">All Status</option>
+              <option value="pass">Pass</option>
+              <option value="issues">Issues</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+        </div>
+        <div id="table-body"></div>
+      </div>
+    </div>
+
+    <!-- Logs Panel -->
+    <div id="logs-panel" style="display:none;">
+      <div class="filter-row" id="log-filters"></div>
+      <div class="table-card">
+        <div class="table-header">
+          <h3>All Inspection Logs</h3>
+          <input type="text" id="log-search" placeholder="Search logs..." oninput="renderLogs()">
+        </div>
+        <div id="log-body"></div>
+      </div>
+    </div>
+
+    <!-- QR Panel -->
+    <div id="qrcodes-panel" style="display:none;">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+        Deploy these QR codes — each links to the inspector portal with the machine pre-loaded.
+        Print and affix to each machine. Replace <code style="color:var(--accent)">YOUR-DOMAIN.com</code> with your hosting URL.
+      </p>
+      <div class="qr-grid" id="qr-grid"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detail-modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modal-title">Inspection Detail</h3>
+      <button class="modal-close" onclick="document.getElementById('detail-modal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── Machine list ────────────────────────────────────────────────────────────
+const MACHINE_LIST = [
+  {id:"M01",name:"CNC Lathe #1",type:"CNC Machinery",icon:"🔩"},
+  {id:"M02",name:"CNC Lathe #2",type:"CNC Machinery",icon:"🔩"},
+  {id:"M03",name:"Milling Machine #1",type:"Milling",icon:"⚙️"},
+  {id:"M04",name:"Milling Machine #2",type:"Milling",icon:"⚙️"},
+  {id:"M05",name:"Hydraulic Press",type:"Press",icon:"🏗️"},
+  {id:"M06",name:"Power Press",type:"Press",icon:"🏗️"},
+  {id:"M07",name:"Surface Grinder",type:"Grinding",icon:"💎"},
+  {id:"M08",name:"Cylindrical Grinder",type:"Grinding",icon:"💎"},
+  {id:"M09",name:"Welding Station #1",type:"Welding",icon:"🔥"},
+  {id:"M10",name:"Welding Station #2",type:"Welding",icon:"🔥"},
+  {id:"M11",name:"Band Saw",type:"Cutting",icon:"🪚"},
+  {id:"M12",name:"Radial Arm Drill",type:"Drilling",icon:"🔧"},
+  {id:"M13",name:"Turret Lathe",type:"CNC Machinery",icon:"🔩"},
+  {id:"M14",name:"Air Compressor",type:"Utility",icon:"💨"},
+  {id:"M15",name:"Overhead Crane",type:"Material Handling",icon:"🏗️"},
+  {id:"M16",name:"Drill Press #1",type:"Drilling",icon:"🔧"},
+  {id:"M17",name:"Drill Press #2",type:"Drilling",icon:"🔧"},
+  {id:"M18",name:"Sheet Metal Shear",type:"Cutting",icon:"✂️"},
+  {id:"M19",name:"Bench Lathe",type:"CNC Machinery",icon:"🔩"},
+  {id:"M20",name:"Pneumatic Riveter",type:"Assembly",icon:"🔨"},
+];
+
+// ─── Clock ───────────────────────────────────────────────────────────────────
+function updateClock() {
+  document.getElementById('clock').textContent = new Date().toLocaleString('en-IN', {weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+updateClock(); setInterval(updateClock, 30000);
+
+// ─── Data helpers ─────────────────────────────────────────────────────────────
+function getLogs() { return JSON.parse(localStorage.getItem('maintenance_logs') || '[]'); }
+function getToday() { return new Date().toISOString().slice(0,10); }
+
+function getMachineSummary() {
+  const logs = getLogs();
+  return MACHINE_LIST.map(m => {
+    const machineLogs = logs.filter(l => l.machineId === m.id).sort((a,b) => new Date(b.timestamp)-new Date(a.timestamp));
+    const latest = machineLogs[0] || null;
+    let status = 'pending';
+    let failedCount = 0;
+    if (latest) {
+      failedCount = latest.summary.failed;
+      status = failedCount === 0 ? 'pass' : 'issues';
+    }
+    const todayLogs = machineLogs.filter(l => l.timestamp.startsWith(getToday()));
+    return { ...m, latest, status, failedCount, totalInspections: machineLogs.length, todayCount: todayLogs.length };
+  });
+}
+
+// ─── Stats ───────────────────────────────────────────────────────────────────
+function renderStats() {
+  const logs = getLogs();
+  const summary = getMachineSummary();
+  const todayFails = logs.filter(l => l.timestamp.startsWith(getToday()) && l.summary.failed > 0).reduce((a,l)=>a+l.summary.failed,0);
+  const okCount = summary.filter(m=>m.status==='pass').length;
+  const pendingCount = summary.filter(m=>m.status==='pending').length;
+  document.getElementById('s-total').textContent = logs.length;
+  document.getElementById('s-ok').textContent = okCount;
+  document.getElementById('s-issues').textContent = todayFails;
+  document.getElementById('s-pending').textContent = pendingCount;
+  document.getElementById('nav-badge').textContent = logs.length;
+}
+
+// ─── Main Table ───────────────────────────────────────────────────────────────
+function renderTable() {
+  const search = document.getElementById('search-input').value.toLowerCase();
+  const filterStatus = document.getElementById('filter-status').value;
+  const summary = getMachineSummary();
+  const filtered = summary.filter(m => {
+    const matchSearch = !search || m.name.toLowerCase().includes(search) || m.id.toLowerCase().includes(search) || m.type.toLowerCase().includes(search);
+    const matchStatus = !filterStatus || m.status === filterStatus;
+    return matchSearch && matchStatus;
+  });
+
+  const statusColors = { pass:'#22c55e', issues:'#ef4444', pending:'#f59e0b' };
+  const tbody = document.getElementById('table-body');
+  if (!filtered.length) { tbody.innerHTML = '<div class="no-data">📭<p>No machines match the filter.</p></div>'; return; }
+
+  let html = `<table><thead><tr>
+    <th>Machine</th><th>Type</th><th>Status</th><th>Failed Checks</th>
+    <th>Last Inspected</th><th>Inspector</th><th>Today</th><th>Actions</th>
+  </tr></thead><tbody>`;
+  filtered.forEach(m => {
+    const statusBadge = m.status === 'pass'
+      ? `<span class="badge badge-green">✓ Pass</span>`
+      : m.status === 'issues'
+      ? `<span class="badge badge-red">✗ Issues</span>`
+      : `<span class="badge badge-amber">— Pending</span>`;
+    const lastTime = m.latest ? new Date(m.latest.timestamp).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+    const lastInspector = m.latest ? m.latest.inspector : '—';
+    const todayBadge = m.todayCount > 0 ? `<span class="badge badge-green">${m.todayCount}</span>` : `<span class="badge badge-gray">0</span>`;
+    html += `<tr>
+      <td><div class="machine-cell">
+        <div class="machine-dot" style="background:${statusColors[m.status]}"></div>
+        <div><div class="machine-name">${m.icon} ${m.name}</div><div class="machine-id">${m.id}</div></div>
+      </div></td>
+      <td><span class="badge badge-gray">${m.type}</span></td>
+      <td>${statusBadge}</td>
+      <td>${m.failedCount > 0 ? `<span style="color:var(--danger);font-weight:600">${m.failedCount}</span>` : `<span style="color:var(--muted)">0</span>`}</td>
+      <td style="color:var(--muted);font-size:12px">${lastTime}</td>
+      <td style="font-size:12px">${lastInspector}</td>
+      <td>${todayBadge}</td>
+      <td>${m.latest ? `<button class="btn-sm" onclick='showDetail("${m.latest.refCode}")'>View</button>` : '—'}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  tbody.innerHTML = html;
+}
+
+// ─── Logs Panel ───────────────────────────────────────────────────────────────
+let logFilter = 'all';
+function renderLogs() {
+  const search = (document.getElementById('log-search')?.value||'').toLowerCase();
+  let logs = getLogs().sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
+  if (logFilter==='today') logs = logs.filter(l=>l.timestamp.startsWith(getToday()));
+  if (logFilter==='issues') logs = logs.filter(l=>l.summary.failed>0);
+  if (search) logs = logs.filter(l=>l.machineName.toLowerCase().includes(search)||l.inspector.toLowerCase().includes(search)||l.empId.toLowerCase().includes(search)||l.refCode.toLowerCase().includes(search));
+
+  const filters = document.getElementById('log-filters');
+  filters.innerHTML = ['all','today','issues'].map(f=>`<button class="filter-chip${logFilter===f?' active':''}" onclick="logFilter='${f}';renderLogs()">
+    ${f==='all'?'All Logs':f==='today'?"Today's":f==='issues'?'With Issues':''}
+  </button>`).join('');
+
+  const body = document.getElementById('log-body');
+  if (!logs.length) { body.innerHTML = '<div class="no-data">📭<p>No logs found.</p></div>'; return; }
+  let html = `<table><thead><tr><th>Ref Code</th><th>Machine</th><th>Inspector</th><th>Emp ID</th><th>Timestamp</th><th>Result</th><th>Detail</th></tr></thead><tbody>`;
+  logs.forEach(l => {
+    const ts = new Date(l.timestamp).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const badge = l.summary.failed===0?`<span class="badge badge-green">✓ ${l.summary.passed}/${l.summary.total} Pass</span>`:`<span class="badge badge-red">✗ ${l.summary.failed} Issue${l.summary.failed>1?'s':''}</span>`;
+    html += `<tr>
+      <td style="font-family:monospace;font-size:11px;color:var(--accent)">${l.refCode}</td>
+      <td>${l.machineId} — ${l.machineName}</td>
+      <td>${l.inspector}</td>
+      <td style="font-size:12px;color:var(--muted)">${l.empId}</td>
+      <td style="font-size:12px;color:var(--muted)">${ts}</td>
+      <td>${badge}</td>
+      <td><button class="btn-sm" onclick='showDetail("${l.refCode}")'>View</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  body.innerHTML = html;
+}
+
+// ─── Detail Modal ─────────────────────────────────────────────────────────────
+function showDetail(refCode) {
+  const logs = getLogs();
+  const log = logs.find(l=>l.refCode===refCode);
+  if (!log) return;
+  document.getElementById('modal-title').textContent = `${log.machineName} — ${log.refCode}`;
+  const ts = new Date(log.timestamp).toLocaleString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  let html = `
+    <div class="detail-row"><span class="detail-label">Machine</span><span>${log.machineId} — ${log.machineName}</span></div>
+    <div class="detail-row"><span class="detail-label">Inspector</span><span>${log.inspector}</span></div>
+    <div class="detail-row"><span class="detail-label">Employee ID</span><span>${log.empId}</span></div>
+    <div class="detail-row"><span class="detail-label">Timestamp</span><span>${ts}</span></div>
+    <div class="detail-row"><span class="detail-label">Result</span><span>${log.summary.passed}/${log.summary.total} passed, ${log.summary.failed} failed</span></div>
+    <div style="margin-top:16px;margin-bottom:8px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Checklist Items</div>`;
+  log.items.forEach((item, i) => {
+    html += `<div class="checklist-log-item ${item.answer}">
+      <div class="log-q">${i+1}. ${item.question}</div>
+      <span class="badge ${item.answer==='yes'?'badge-green':'badge-red'}">${item.answer==='yes'?'✓ Yes':'✗ No'}</span>
+      ${item.comment?`<div class="log-comment">⚠ ${item.comment}</div>`:''}
+    </div>`;
+  });
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('detail-modal').classList.add('open');
+}
+function closeModal(e) { if (e.target.id==='detail-modal') document.getElementById('detail-modal').classList.remove('open'); }
+
+// ─── QR Panel ─────────────────────────────────────────────────────────────────
+function renderQR() {
+  const base = 'https://YOUR-DOMAIN.com/inspector.html';
+  const grid = document.getElementById('qr-grid');
+  grid.innerHTML = MACHINE_LIST.map(m => `
+    <div class="qr-card">
+      <div class="qr-placeholder">
+        <svg viewBox="0 0 60 60" width="80" height="80">
+          <rect x="2" y="2" width="20" height="20" rx="2" fill="none" stroke="#000" stroke-width="2"/>
+          <rect x="7" y="7" width="10" height="10" fill="#000"/>
+          <rect x="38" y="2" width="20" height="20" rx="2" fill="none" stroke="#000" stroke-width="2"/>
+          <rect x="43" y="7" width="10" height="10" fill="#000"/>
+          <rect x="2" y="38" width="20" height="20" rx="2" fill="none" stroke="#000" stroke-width="2"/>
+          <rect x="7" y="43" width="10" height="10" fill="#000"/>
+          <rect x="28" y="28" width="4" height="4" fill="#000"/>
+          <rect x="34" y="28" width="4" height="4" fill="#000"/>
+          <rect x="40" y="28" width="4" height="4" fill="#000"/>
+          <rect x="28" y="34" width="4" height="4" fill="#000"/>
+          <rect x="40" y="34" width="4" height="4" fill="#000"/>
+          <rect x="28" y="40" width="4" height="4" fill="#000"/>
+          <rect x="34" y="40" width="4" height="4" fill="#000"/>
+          <rect x="46" y="34" width="4" height="4" fill="#000"/>
+          <rect x="52" y="28" width="4" height="4" fill="#000"/>
+          <rect x="52" y="40" width="4" height="4" fill="#000"/>
+        </svg>
+        <span style="color:#888">${m.id}</span>
+      </div>
+      <h4>${m.icon} ${m.name}</h4>
+      <p>${m.type}</p>
+      <div class="qr-url">${base}?machine=${m.id}</div>
+    </div>`).join('');
+}
+
+// ─── Panel Navigation ─────────────────────────────────────────────────────────
+function showPanel(panel) {
+  document.querySelectorAll('.nav-item').forEach((el,i)=>el.classList.toggle('active',['dashboard','logs','qrcodes'][i]===panel));
+  document.getElementById('dashboard-panel').style.display = panel==='dashboard'?'block':'none';
+  document.getElementById('logs-panel').style.display = panel==='logs'?'block':'none';
+  document.getElementById('qrcodes-panel').style.display = panel==='qrcodes'?'block':'none';
+  const titles = {dashboard:['Machine Summary Dashboard','Overview of all 20 machines'], logs:['Inspection Logs','All submissions'], qrcodes:['QR Code Generator','Print & deploy to machines']};
+  document.getElementById('panel-title').textContent = titles[panel][0];
+  document.getElementById('panel-sub').textContent = titles[panel][1];
+  if (panel==='logs') renderLogs();
+  if (panel==='qrcodes') renderQR();
+}
+
+// ─── Export CSV ───────────────────────────────────────────────────────────────
+function exportCSV() {
+  const logs = getLogs();
+  if (!logs.length) { showToast('No data to export'); return; }
+  const rows = [['Ref Code','Machine ID','Machine Name','Inspector','Emp ID','Timestamp','Total','Passed','Failed']];
+  logs.forEach(l => rows.push([l.refCode,l.machineId,l.machineName,l.inspector,l.empId,l.timestamp,l.summary.total,l.summary.passed,l.summary.failed]));
+  const csv = rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download = `maintenance_logs_${getToday()}.csv`; a.click();
+  showToast('CSV exported successfully');
+}
+
+// ─── Clear Data ───────────────────────────────────────────────────────────────
+function clearData() {
+  if (!confirm('Clear ALL inspection logs? This cannot be undone.')) return;
+  localStorage.removeItem('maintenance_logs');
+  refresh(); showToast('All data cleared');
+}
+
+// ─── Demo Data ────────────────────────────────────────────────────────────────
+function loadDemoData() {
+  const inspectors = [
+    {name:'Rajesh Kumar',empId:'EMP-001'},{name:'Priya Sharma',empId:'EMP-002'},
+    {name:'Mohammed Farooq',empId:'EMP-003'},{name:'Deepa Nair',empId:'EMP-004'},
+    {name:'Suresh Babu',empId:'EMP-005'}
+  ];
+  const now = Date.now();
+  const logs = [];
+  MACHINE_LIST.forEach((m, mi) => {
+    const inspector = inspectors[mi % inspectors.length];
+    const hoursAgo = mi < 15 ? Math.floor(Math.random()*8) : 24+Math.floor(Math.random()*24);
+    const ts = new Date(now - hoursAgo*3600000).toISOString();
+    const items = Array.from({length:6},(_,i)=>{
+      const fail = Math.random() < (mi % 5 === 0 ? 0.3 : 0.08);
+      return { question:`Check item ${i+1}`, answer: fail?'no':'yes', comment: fail?'Requires immediate attention — component showing wear.':'' };
+    });
+    const passed = items.filter(x=>x.answer==='yes').length;
+    const failed = items.filter(x=>x.answer==='no').length;
+    logs.push({
+      refCode:`${m.id}-${(now-mi*1000).toString(36).toUpperCase()}`,
+      machineId:m.id, machineName:m.name, machineType:m.type,
+      inspector:inspector.name, empId:inspector.empId, timestamp:ts,
+      items, summary:{total:items.length,passed,failed}
+    });
+  });
+  localStorage.setItem('maintenance_logs', JSON.stringify(logs));
+  refresh(); showToast('Demo data loaded — 20 inspection records');
+}
+
+// ─── Toast ───────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+// ─── Refresh all ─────────────────────────────────────────────────────────────
+function refresh() { renderStats(); renderTable(); if (document.getElementById('logs-panel').style.display!=='none') renderLogs(); }
+refresh();
+
+// Auto-refresh every 30s
+setInterval(refresh, 30000);
+</script>
+</body>
+</html>

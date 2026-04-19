@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Machine Inspection Portal</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface2: #334155;
+    --accent: #38bdf8;
+    --accent2: #0ea5e9;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --border: rgba(148,163,184,0.15);
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 0 40px;
+  }
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header-icon {
+    width: 36px; height: 36px;
+    background: var(--accent2);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .header h1 { font-size: 16px; font-weight: 600; }
+  .header p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .container { padding: 20px; max-width: 480px; margin: 0 auto; }
+
+  /* Machine Badge */
+  .machine-badge {
+    background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .machine-badge .icon { font-size: 32px; }
+  .machine-badge h2 { font-size: 18px; font-weight: 700; }
+  .machine-badge p { font-size: 13px; opacity: 0.85; margin-top: 2px; }
+
+  /* Auth Form */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card h3 { font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  input[type=text] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 15px;
+    margin-bottom: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type=text]:focus { border-color: var(--accent); }
+
+  /* Checklist */
+  .checklist-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .checklist-item.fail { border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.05); }
+  .checklist-item.pass { border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.05); }
+  .item-question { font-size: 14px; font-weight: 500; margin-bottom: 12px; line-height: 1.4; }
+  .toggle-row { display: flex; gap: 8px; margin-bottom: 0; }
+  .toggle-btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .toggle-btn.yes.active { background: rgba(34,197,94,0.15); border-color: var(--success); color: var(--success); }
+  .toggle-btn.no.active { background: rgba(239,68,68,0.15); border-color: var(--danger); color: var(--danger); }
+  .comment-box {
+    margin-top: 12px;
+    display: none;
+  }
+  .comment-box textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid rgba(239,68,68,0.4);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-size: 14px;
+    resize: vertical;
+    min-height: 70px;
+    outline: none;
+    font-family: inherit;
+  }
+  .comment-box textarea:focus { border-color: var(--danger); }
+  .comment-box label { color: var(--danger); font-size: 12px; }
+
+  /* Progress */
+  .progress-bar {
+    background: var(--surface2);
+    border-radius: 99px;
+    height: 6px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    background: var(--accent2);
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.3s;
+  }
+  .progress-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
+
+  /* Submit */
+  .submit-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent2);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    margin-top: 8px;
+  }
+  .submit-btn:hover { background: var(--accent); }
+  .submit-btn:active { transform: scale(0.98); }
+  .submit-btn:disabled { background: var(--surface2); color: var(--muted); cursor: not-allowed; transform: none; }
+
+  /* Success Screen */
+  #success-screen {
+    display: none;
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .success-icon {
+    width: 80px; height: 80px;
+    background: rgba(34,197,94,0.15);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 40px;
+    border: 2px solid var(--success);
+  }
+  #success-screen h2 { font-size: 22px; margin-bottom: 8px; }
+  #success-screen p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .ref-code {
+    display: inline-block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: monospace;
+    font-size: 13px;
+    color: var(--accent);
+    margin-top: 16px;
+  }
+
+  #login-section { display: block; }
+  #checklist-section { display: none; }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 20px 0 12px;
+  }
+  .alert {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #fca5a5;
+    margin-bottom: 14px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">🔧</div>
+  <div>
+    <h1>Maintenance Inspector</h1>
+    <p id="header-sub">Workshop QR System</p>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Machine Badge -->
+  <div class="machine-badge" id="machine-badge">
+    <div class="icon" id="machine-icon">⚙️</div>
+    <div>
+      <h2 id="machine-name">Loading...</h2>
+      <p id="machine-type">Scanning machine ID...</p>
+    </div>
+  </div>
+
+  <!-- LOGIN SECTION -->
+  <div id="login-section">
+    <div class="card">
+      <h3>Inspector Authentication</h3>
+      <div class="alert" id="auth-error">Please fill in all fields correctly.</div>
+      <label>Full Name</label>
+      <input type="text" id="input-name" placeholder="e.g. Rajesh Kumar" autocomplete="name">
+      <label>Employee ID</label>
+      <input type="text" id="input-empid" placeholder="e.g. EMP-0042" autocomplete="off">
+      <button class="submit-btn" onclick="doLogin()">Verify & Start Inspection</button>
+    </div>
+  </div>
+
+  <!-- CHECKLIST SECTION -->
+  <div id="checklist-section">
+    <div class="progress-label">
+      <span id="progress-text">0 of 0 answered</span>
+      <span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+    <div class="section-title">Inspection Checklist</div>
+    <div id="checklist-items"></div>
+
+    <button class="submit-btn" id="submit-btn" onclick="submitInspection()" disabled>
+      Submit Inspection Report
+    </button>
+  </div>
+
+  <!-- SUCCESS SCREEN -->
+  <div id="success-screen">
+    <div class="success-icon">✓</div>
+    <h2>Inspection Complete</h2>
+    <p>Your report has been submitted and logged to the central database.</p>
+    <div class="ref-code" id="ref-code">REF: ...</div>
+    <p style="margin-top:16px; font-size:13px; color:var(--muted)">You may now close this window.</p>
+  </div>
+
+</div>
+
+<script>
+// ─── Machine Database ───────────────────────────────────────────────────────
+const MACHINES = {
+  "M01": { name: "CNC Lathe #1", type: "CNC Machinery", icon: "🔩", checklist: [
+    "Is the spindle running smoothly without vibration?",
+    "Are coolant levels within the acceptable range?",
+    "Is the chuck guard securely in place?",
+    "Are all axis movements within tolerance (±0.01mm)?",
+    "Is the lubrication system functional and free of leaks?",
+    "Are emergency stop buttons operational?",
+  ]},
+  "M02": { name: "CNC Lathe #2", type: "CNC Machinery", icon: "🔩", checklist: [
+    "Is the spindle running smoothly without vibration?",
+    "Are coolant levels within the acceptable range?",
+    "Is the chuck guard securely in place?",
+    "Are all axis movements within tolerance (±0.01mm)?",
+    "Is the lubrication system functional and free of leaks?",
+    "Are emergency stop buttons operational?",
+  ]},
+  "M03": { name: "Milling Machine #1", type: "Milling", icon: "⚙️", checklist: [
+    "Is the milling head aligned correctly?",
+    "Are all cutting tool holders tight and undamaged?",
+    "Is the work table movement smooth on all axes?",
+    "Are chip guards and shields in place?",
+    "Is coolant flow unobstructed and at correct pressure?",
+    "Is the spindle speed indicator reading correctly?",
+  ]},
+  "M04": { name: "Milling Machine #2", type: "Milling", icon: "⚙️", checklist: [
+    "Is the milling head aligned correctly?",
+    "Are all cutting tool holders tight and undamaged?",
+    "Is the work table movement smooth on all axes?",
+    "Are chip guards and shields in place?",
+    "Is coolant flow unobstructed and at correct pressure?",
+    "Is the spindle speed indicator reading correctly?",
+  ]},
+  "M05": { name: "Hydraulic Press", type: "Press", icon: "🏗️", checklist: [
+    "Is hydraulic fluid at the correct level?",
+    "Are all hydraulic hoses free from leaks or damage?",
+    "Is the pressure gauge reading within operating range?",
+    "Are safety interlock switches functional?",
+    "Is the ram guide lubricated and moving freely?",
+    "Are all guard barriers correctly positioned?",
+  ]},
+  "M06": { name: "Power Press", type: "Press", icon: "🏗️", checklist: [
+    "Is the flywheel guard secure?",
+    "Are clutch and brake mechanisms responsive?",
+    "Is the die set properly aligned and secured?",
+    "Are two-hand safety controls working?",
+    "Is the press bed clean and free of debris?",
+    "Are all fasteners and bolts torqued correctly?",
+  ]},
+  "M07": { name: "Surface Grinder", type: "Grinding", icon: "💎", checklist: [
+    "Is the grinding wheel free of cracks or chips?",
+    "Is the wheel guard properly secured?",
+    "Is the magnetic chuck holding power adequate?",
+    "Is coolant flow pointed correctly at the grinding zone?",
+    "Is the table traverse movement smooth?",
+    "Are the diamond dresser and truing tools in good condition?",
+  ]},
+  "M08": { name: "Cylindrical Grinder", type: "Grinding", icon: "💎", checklist: [
+    "Are wheel flanges and blotters in good condition?",
+    "Is the grinding wheel properly balanced?",
+    "Are work centres clean and undamaged?",
+    "Is coolant concentration within specification?",
+    "Is the tailstock pressure adequate for the workpiece?",
+    "Are all guards correctly installed?",
+  ]},
+  "M09": { name: "Welding Station #1", type: "Welding", icon: "🔥", checklist: [
+    "Is the welding machine earth clamp securely attached?",
+    "Are electrode holders and cables undamaged?",
+    "Is the fume extraction system operating?",
+    "Are gas cylinders properly secured and valve covers in place?",
+    "Is welding curtain/screen positioned correctly?",
+    "Are fire extinguishers within 5 metres and charged?",
+  ]},
+  "M10": { name: "Welding Station #2", type: "Welding", icon: "🔥", checklist: [
+    "Is the welding machine earth clamp securely attached?",
+    "Are electrode holders and cables undamaged?",
+    "Is the fume extraction system operating?",
+    "Are gas cylinders properly secured and valve covers in place?",
+    "Is welding curtain/screen positioned correctly?",
+    "Are fire extinguishers within 5 metres and charged?",
+  ]},
+  "M11": { name: "Band Saw", type: "Cutting", icon: "🪚", checklist: [
+    "Is the blade tension correct and blade tracking true?",
+    "Are blade guides and thrust bearings properly adjusted?",
+    "Is the blade guard lowered to just above the workpiece?",
+    "Is the blade free of cracks, missing teeth, or distortion?",
+    "Is the table locked at the correct angle?",
+    "Is the dust/chip collection bag in place and not full?",
+  ]},
+  "M12": { name: "Radial Arm Drill", type: "Drilling", icon: "🔧", checklist: [
+    "Is the radial arm lock mechanism functioning?",
+    "Is the drill head clamping secure at all positions?",
+    "Is the spindle feed depth stop set correctly?",
+    "Are drill chucks and arbors undamaged and running true?",
+    "Is the work table and vise securely clamped?",
+    "Is the coolant nozzle positioned correctly?",
+  ]},
+  "M13": { name: "Turret Lathe", type: "CNC Machinery", icon: "🔩", checklist: [
+    "Is the turret indexing accurately and locking firmly?",
+    "Are all tool holders secure in the turret?",
+    "Is the cross-slide and carriage movement smooth?",
+    "Is coolant system free of blockages?",
+    "Are bar feed mechanisms functioning correctly?",
+    "Are all covers and guards in place?",
+  ]},
+  "M14": { name: "Air Compressor", type: "Utility", icon: "💨", checklist: [
+    "Is the oil level in the compressor crankcase correct?",
+    "Are all air line connections free from leaks?",
+    "Is the pressure relief valve functional?",
+    "Is the air filter element clean and installed?",
+    "Does the pressure gauge read within operating range?",
+    "Is the motor running without unusual noise or vibration?",
+  ]},
+  "M15": { name: "Overhead Crane", type: "Material Handling", icon: "🏗️", checklist: [
+    "Is the hook and safety latch undamaged and functional?",
+    "Are wire ropes or chains free from kinks, wear, or broken strands?",
+    "Are limit switches (hoist up/down, travel) functional?",
+    "Is the load brake holding without drift?",
+    "Are all pendant controls clearly labelled and working?",
+    "Has the rated capacity label been checked and confirmed?",
+  ]},
+  "M16": { name: "Drill Press #1", type: "Drilling", icon: "🔧", checklist: [
+    "Is the quill return spring functioning correctly?",
+    "Is the spindle depth stop set and locked?",
+    "Is the table locked firmly at the correct height?",
+    "Is the chuck key stored away (not in chuck)?",
+    "Is the drill guard/shield in position?",
+    "Is the motor belt tension within specification?",
+  ]},
+  "M17": { name: "Drill Press #2", type: "Drilling", icon: "🔧", checklist: [
+    "Is the quill return spring functioning correctly?",
+    "Is the spindle depth stop set and locked?",
+    "Is the table locked firmly at the correct height?",
+    "Is the chuck key stored away (not in chuck)?",
+    "Is the drill guard/shield in position?",
+    "Is the motor belt tension within specification?",
+  ]},
+  "M18": { name: "Sheet Metal Shear", type: "Cutting", icon: "✂️", checklist: [
+    "Is the blade gap set to the correct clearance for sheet thickness?",
+    "Are hold-down clamps operational and applying even pressure?",
+    "Is the back gauge set and locked correctly?",
+    "Is the blade edge sharp and free of nicks?",
+    "Are all hand guards in position?",
+    "Is the foot pedal guard functioning correctly?",
+  ]},
+  "M19": { name: "Bench Lathe", type: "CNC Machinery", icon: "🔩", checklist: [
+    "Are the chuck jaws clean and gripping correctly?",
+    "Is the tailstock aligned with the headstock?",
+    "Is the tool post secure and at correct height?",
+    "Is the lead screw and half-nut mechanism working smoothly?",
+    "Is the chip pan clean and drain clear?",
+    "Are all guards and shields fitted?",
+  ]},
+  "M20": { name: "Pneumatic Riveter", type: "Assembly", icon: "🔨", checklist: [
+    "Is air inlet pressure within 4-6 bar?",
+    "Is the air line moisture trap drained and functional?",
+    "Are anvil and set in correct condition (no cracks)?",
+    "Is the trigger mechanism operating smoothly?",
+    "Is the hose free from kinks or abrasion damage?",
+    "Is the inline oiler lubricated and set correctly?",
+  ]},
+};
+
+// ─── URL Param Parsing ──────────────────────────────────────────────────────
+const params = new URLSearchParams(window.location.search);
+let machineId = params.get('machine') || 'M01';
+if (!MACHINES[machineId]) machineId = 'M01';
+const machine = MACHINES[machineId];
+
+document.getElementById('machine-name').textContent = machine.name;
+document.getElementById('machine-type').textContent = machine.type;
+document.getElementById('machine-icon').textContent = machine.icon;
+document.getElementById('header-sub').textContent = `Machine ${machineId}`;
+document.title = `Inspect: ${machine.name}`;
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+function doLogin() {
+  const name = document.getElementById('input-name').value.trim();
+  const empId = document.getElementById('input-empid').value.trim();
+  const err = document.getElementById('auth-error');
+  if (!name || name.length < 3) { err.style.display='block'; err.textContent='Please enter your full name.'; return; }
+  if (!empId || empId.length < 3) { err.style.display='block'; err.textContent='Please enter a valid Employee ID.'; return; }
+  err.style.display='none';
+  window._inspector = { name, empId };
+  document.getElementById('login-section').style.display='none';
+  document.getElementById('checklist-section').style.display='block';
+  buildChecklist();
+}
+
+// ─── Checklist Builder ───────────────────────────────────────────────────────
+let answers = {};
+function buildChecklist() {
+  const container = document.getElementById('checklist-items');
+  container.innerHTML = '';
+  machine.checklist.forEach((q, i) => {
+    const div = document.createElement('div');
+    div.className = 'checklist-item';
+    div.id = `item-${i}`;
+    div.innerHTML = `
+      <div class="item-question">${i+1}. ${q}</div>
+      <div class="toggle-row">
+        <button class="toggle-btn yes" onclick="setAnswer(${i},'yes')">✓ Yes</button>
+        <button class="toggle-btn no" onclick="setAnswer(${i},'no')">✗ No</button>
+      </div>
+      <div class="comment-box" id="comment-${i}">
+        <label>⚠ Mandatory comment for "No" response</label>
+        <textarea id="textarea-${i}" placeholder="Describe the issue in detail..." oninput="updateProgress()"></textarea>
+      </div>`;
+    container.appendChild(div);
+  });
+  updateProgress();
+}
+
+function setAnswer(idx, val) {
+  answers[idx] = val;
+  const item = document.getElementById(`item-${idx}`);
+  const commentBox = document.getElementById(`comment-${idx}`);
+  item.querySelector('.toggle-btn.yes').classList.toggle('active', val==='yes');
+  item.querySelector('.toggle-btn.no').classList.toggle('active', val==='no');
+  item.className = 'checklist-item ' + (val==='yes' ? 'pass' : 'fail');
+  commentBox.style.display = val==='no' ? 'block' : 'none';
+  if (val==='yes') document.getElementById(`textarea-${idx}`).value = '';
+  updateProgress();
+}
+
+function updateProgress() {
+  const total = machine.checklist.length;
+  let answered = 0;
+  let allValid = true;
+  for (let i=0; i<total; i++) {
+    if (answers[i]) {
+      if (answers[i]==='no') {
+        const comment = document.getElementById(`textarea-${i}`).value.trim();
+        if (!comment) { allValid = false; } else { answered++; }
+      } else { answered++; }
+    } else { allValid = false; }
+  }
+  const pct = Math.round((answered/total)*100);
+  document.getElementById('progress-fill').style.width = pct+'%';
+  document.getElementById('progress-text').textContent = `${answered} of ${total} answered`;
+  document.getElementById('progress-pct').textContent = pct+'%';
+  const allAnswered = Object.keys(answers).length === total;
+  document.getElementById('submit-btn').disabled = !(allAnswered && allValid);
+}
+
+// ─── Submit ──────────────────────────────────────────────────────────────────
+function submitInspection() {
+  const timestamp = new Date().toISOString();
+  const refCode = `${machineId}-${Date.now().toString(36).toUpperCase()}`;
+  const items = machine.checklist.map((q, i) => ({
+    question: q,
+    answer: answers[i],
+    comment: answers[i]==='no' ? document.getElementById(`textarea-${i}`).value.trim() : ''
+  }));
+  const record = {
+    refCode, machineId, machineName: machine.name, machineType: machine.type,
+    inspector: window._inspector.name, empId: window._inspector.empId,
+    timestamp, items,
+    summary: { total: items.length, passed: items.filter(x=>x.answer==='yes').length, failed: items.filter(x=>x.answer==='no').length }
+  };
+
+  // Save to localStorage (shared with admin dashboard)
+  const existing = JSON.parse(localStorage.getItem('maintenance_logs') || '[]');
+  existing.push(record);
+  localStorage.setItem('maintenance_logs', JSON.stringify(existing));
+
+  // Show success
+  document.getElementById('checklist-section').style.display='none';
+  document.getElementById('machine-badge').style.display='none';
+  document.getElementById('success-screen').style.display='block';
+  document.getElementById('ref-code').textContent = `REF: ${refCode}`;
+}
+</script>
+</body>
+</html>
